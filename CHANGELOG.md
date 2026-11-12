@@ -1,5 +1,115 @@
 # Changelog
 
+### **[2.24.4] - 2026-10-18**
+
+### 🐛 Bug Fix 
+* **Sync Watchdog triggered: force releasing lock**
+
+### **[2.24.3] - 2026-10-17**
+
+### 🚀 Highlights & Architectural Improvements
+* **Content-Addressed Thumbnail Caching (SHA-256) - enables blazing-fast speeds when moving files in batches**: 
+  * Image thumbnails are now indexed by their SHA-256 file content digest rather than their file path and timestamp.
+  * **Two-tier Directory Sharding**: Thumbnails are stored in organized subfolders (`.thumbnails_cache/<variant>/ab/cd/<sha256>.webp`), significantly improving filesystem performance on systems with tens of thousands of media assets.
+  * **High-Efficiency WebP**: All image thumbnails (both static and animated) are generated as WebP, preserving alpha transparency, animation looping, and frame intervals while reducing cache disk footprint.
+  * **Configuration-Aware Cache Invalidation**: Thumbnail width and animation frame rate settings are embedded directly into the cache folder namespace, preventing stale or incorrectly scaled images without requiring sidecar files.
+
+* **Instant Metadata & Workflow Reuse for Duplicates**:
+  * When adding duplicates or moving images across folders, SmartGallery detects existing content hashes in the database. Node summaries, generation parameters, and workflow structures are re-linked instantly without re-parsing files.
+
+* **Non-Destructive Timestamp Handling**:
+  * Updating a file's timestamp (`mtime`) on disk without altering its actual image content no longer clears favorite stars or AI-generated annotations.
+
+* **Smart Thumbnail Garbage Collection**:
+  * Automated migration from legacy flat MD5-based thumbnails to the new hashed structure.
+  * Deleting assets cleans up associated thumbnail files on disk only if no other asset shares the exact same content hash.
+  * Startup maintenance sweeps unreferenced legacy cache entries safely.
+
+### 🐛 Bug Fixes & Refinements
+* **Folder Rename Path Resolution**:
+  * Fixed an issue where renaming a folder could inadvertently match sibling folders sharing similar prefix names.
+  * Nested subfolder paths and their database references are now cleanly reconstructed using relative path normalization.
+* **Scan Stream Keep-Alive**:
+  * Added periodic progress heartbeats to on-demand directory sync operations to prevent Server-Sent Event (SSE) timeouts on very large libraries.
+* **Database Schema Version 32**:
+  * Non-destructive migration adding indexed `content_sha256` support to the `files` table. All collections, tags, ratings, and comments remain completely intact.
+
+---
+
+### **[2.24.2] - 2026-10-03**
+
+### 🚀 Features & Enhancements
+* **Generation Data Overlay (`Shift+M`):** Added a toggleable overlay (via shortcut `Shift+M` or the *Settings & Info* menu) that displays key generation parameters on focused thumbnails in Grid View and inside the Lightbox. Supports both **ComfyUI** and **AUTOMATIC1111 (A1111 / WebUI)** metadata formats.
+* **Full Asset Details:** Added a dedicated **"Generation data"** tab inspecting structured generation parameters for both ComfyUI and A1111 assets.
+* **Remix Workflow (Auto-Form):** Enhanced input image resolution management with instant dimension inheritance, zero-dimension aspect ratio preservation, integrated aspect ratio locking (`🔒`/`🔓`), quick scaling, and guidance to Nodepad when preset resolution nodes are detected.
+
+---
+
+### **[2.24.1] - 2026-09-17**
+
+### 🚀 Features & Enhancements
+* **Metadata Extraction:** Generalized the extraction of metadata across the application.
+* **Docker Base Image:** Updated the base Docker image to be based on Python 3.14.
+
+### 🐛 Bug Fixes & Stability
+* **Folder Refresh Freezes:** Fixed an issue where refreshing a folder (using the `L` key) could freeze the gallery on Linux, Docker, or multi-core systems.
+* **Stuck Video Previews:** Prevented the gallery from hanging indefinitely when generating thumbnails from corrupted, busy, or in-progress video files.
+* **Smoother Background Sync:** Fixed occasional gallery slowdowns and database lockups when browsing while folders are updating.
+* **Reliable Sync Popup:** The sync window now shows smooth real-time progress and will automatically recover instead of getting stuck on screen.
+* **Queue Deck & Keyboard Controls:** Fixed keyboard shortcuts and Sort buttons occasionally becoming unresponsive after opening or closing the Queue Deck (`Shift+Q` / `Esc`).
+
+---
+
+### **[2.24] - 2026-09-08**
+
+### 🔍 ComfyUI Queue Deck: Infinite Lightbox & Enhanced Job Inspector
+
+* **Infinite Canvas Fullscreen Viewer:** Introduced an unconstrained, borderless fullscreen lightbox for output media with free-floating 360° drag & pan, zoom up to 1500% (15x), intelligent zoom-to-cursor via mouse wheel, keyboard zoom shortcuts (`+`, `-`, `0` to reset), and double-click zoom toggle (100% / 250%).
+* **Real-Time Resolution & Megapixel Telemetry:** Added automatic extraction and display of natural pixel dimensions and calculated Megapixels (e.g., `1024 × 1024 (1.05 MP)`) in both the job details panel and the fullscreen lightbox.
+* **Side-Arrow Navigation & Zero-Latency Counter:** Replaced header buttons with floating side navigation arrows (`<` and `>`) overlaid directly on the media canvas, synchronized with a real-time `1/N` counter that updates instantly (0ms latency).
+* **Keyboard Navigation & Isolated Escape Exit:** Full keyboard support using `ArrowLeft` / `ArrowRight` to browse between recent jobs while preserving fullscreen mode, and isolated `Escape` handling to exit fullscreen back to the job details view without dismissing the main modal.
+
+### 📚 Sub-Collections in Tag Manager
+* **In-Modal Sub-Collection Creation:** Added a dedicated `📁+` action button directly on each row of the Tagging / Collections modal tree, allowing users to create nested sub-collections on the fly with full inheritance and Exhibition visibility configuration.
+
+### 🌐 System-Locale Aware Date Formatting
+* **Universal Date Localization:** Converted all date and time displays to use native browser/system regional preferences (`toLocaleString`), ensuring seamless date conventions across all regions (e.g. US `MM/DD/YY` vs European `DD/MM/YY`).
+
+### 🐛 Bug Fixes & Stability
+* **Date Filter Badge Counter:** Fixed an issue in the backend where applying `start_date` and `end_date` filters was omitted from the active filter badge count on the main filter button.
+* **Modal Navigation & Scroll Freeze:** Resolved an issue where creating collections from the tagging modal left the `modal-open` state active on the document body and retained keydown event listeners, preventing mouse scrolling and keyboard gallery navigation.
+
+---
+
+### **[2.23] - 2026-09-05**
+
+### ⚡ ComfyUI Queue Deck
+
+**What it does:**  
+Introduces **ComfyUI Queue Deck**, a real-time mission control center to inspect and manage generation queues, track progressive sampling steps, stream live previews, monitor driver-level VRAM and GPU compute loads, and inspect completed job graphs and metadata.
+
+**How to access:**
+* Press **`Shift+Q`** anywhere in the gallery for instant access.
+* Or open it from the top navigation bar via **`Tools` → `ComfyUI Queue Deck`**.
+
+### ✨ Improvements & Node Inspector
+
+* **Interactive Node JSON Chips:** All node chips across both the **Full Asset Details (Info panel)** and the **Cluster Inspector** are now interactive and clickable, opening a global viewer to inspect the raw JSON parameters and configuration for any individual node in the workflow.
+
+### 🐛 Bug Fixes & Resource Optimization
+
+* **Auto-Watch GPU Resource Leak:** Resolved an issue where enabling the "Auto-watch" feature caused disproportionate GPU compute usage on the client side even while idle.
+
+---
+
+### **[2.22.1] - 2026-08-18**
+
+### 🐛 Bug Fixes 
+
+* **Fixed prompt hashing for clustering malfunctioning on newly generated files during active work sessions.
+
+---
+
 ### **[2.22] - 2026-08-12**
 
 ### 📁 Folder File Count Badges & Dynamic Tree Collapse
